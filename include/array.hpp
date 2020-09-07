@@ -23,6 +23,9 @@ struct Array
 
 	uint64_t size() const;
 
+	typename std::vector<T>::iterator begin();
+	typename std::vector<T>::iterator end();
+
 private:
 	std::vector<T> data;
 	std::vector<uint64_t> op_ids;
@@ -81,6 +84,18 @@ template<typename T>
 inline uint64_t Array<T>::size() const
 {
 	return data_size;
+}
+
+template<typename T>
+inline typename std::vector<T>::iterator Array<T>::begin()
+{
+	return data.begin();
+}
+
+template<typename T>
+inline typename std::vector<T>::iterator Array<T>::end()
+{
+	return data.begin() + data_size;
 }
 
 template<typename T>

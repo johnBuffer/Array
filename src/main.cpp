@@ -25,14 +25,7 @@ int main()
 
 	a.erase(id_2);
 
-	a.push_back(11);
-
-	if (ptr_1) {
-		std::cout << "PTR value " << *ptr_1 << std::endl;
+	for (int32_t b : a) {
+		std::cout << b << std::endl;
 	}
-	else {
-		std::cout << "PTR invalid" << std::endl;
-	}
-
-	printArray(a);
 }
