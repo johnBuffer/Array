@@ -19,6 +19,11 @@ int main()
 	uint64_t id_3 = a.push_back(2);
 	uint64_t id_4 = a.push_back(9);
 
+	Ptr<int32_t> ptr_1 = a.getPtr(id_2);
+
+	std::cout << "PTR value " << *ptr_1 << std::endl;
+	*ptr_1 = 12;
+
 	a.erase(0);
 
 	printArray(a);

@@ -2,6 +2,9 @@
 #include <vector>
 
 template<typename T>
+struct Ptr;
+
+template<typename T>
 struct Array
 {
 	Array() :
@@ -13,6 +16,7 @@ struct Array
 
 	T& operator[](uint64_t i);
 	const T& operator[](uint64_t i) const;
+	Ptr<T> getPtr(uint64_t id);
 
 	uint64_t size() const;
 
@@ -63,6 +67,12 @@ inline const T& Array<T>::operator[](uint64_t i) const
 }
 
 template<typename T>
+inline Ptr<T> Array<T>::getPtr(uint64_t id)
+{
+	return Ptr<T>(id, *this);
+}
+
+template<typename T>
 inline uint64_t Array<T>::size() const
 {
 	return data_size;
@@ -91,3 +101,27 @@ inline const T& Array<T>::getAt(uint64_t i) const
 {
 	return data[ids[i]];
 }
+
+
+template<typename T>
+struct Ptr
+{
+	Ptr(uint64_t id_, Array<T>& a)
+		: id(id_)
+		, array(a)
+	{}
+
+	T* operator->()
+	{
+		return &array[id];
+	}
+
+	T& operator*()
+	{
+		return array[id];
+	}
+
+private:
+	uint64_t id;
+	Array<T>& array;
+};
