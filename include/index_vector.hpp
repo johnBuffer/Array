@@ -7,24 +7,30 @@ template<typename T>
 struct Ptr;
 
 template<typename T>
-struct Array
+struct IndexVector
 {
-	Array() :
+	IndexVector() :
 		data_size(0)
 	{}
-
+	// Data ADD / REMOVE
 	uint64_t push_back(const T& obj);
 	void erase(uint64_t id);
-
+	// Data access by ID
 	T& operator[](uint64_t i);
 	const T& operator[](uint64_t i) const;
-	bool isValid(uint64_t i, uint64_t validity);
+	// Returns a standalone object allowing access to the underlying data
 	Ptr<T> getPtr(uint64_t id);
-
-	uint64_t size() const;
-
+	// Returns the data at a specific place in the data vector (not an ID)
+	T& getDataAt(uint64_t i);
+	// Check if the data behind the pointer is the same
+	bool isValid(uint64_t i, uint64_t validity) const;
+	// Returns the ID of the ith element of the data array
+	uint64_t getID(uint64_t i) const;
+	// Iterators
 	typename std::vector<T>::iterator begin();
 	typename std::vector<T>::iterator end();
+	// Number of objects in the array
+	uint64_t size() const;
 
 private:
 	std::vector<T> data;
@@ -40,7 +46,7 @@ private:
 };
 
 template<typename T>
-inline uint64_t Array<T>::push_back(const T& obj)
+inline uint64_t IndexVector<T>::push_back(const T& obj)
 {
 	if (data_size == data.size()) {
 		return createNewSlot(obj);
@@ -50,7 +56,7 @@ inline uint64_t Array<T>::push_back(const T& obj)
 }
 
 template<typename T>
-inline void Array<T>::erase(uint64_t id)
+inline void IndexVector<T>::erase(uint64_t id)
 {
 	--data_size;
 	uint64_t current_data_id = ids[id];
@@ -63,43 +69,55 @@ inline void Array<T>::erase(uint64_t id)
 }
 
 template<typename T>
-inline T& Array<T>::operator[](uint64_t i)
+inline T& IndexVector<T>::operator[](uint64_t i)
 {
 	return const_cast<T&>(getAt(i));
 }
 
 template<typename T>
-inline const T& Array<T>::operator[](uint64_t i) const
+inline const T& IndexVector<T>::operator[](uint64_t i) const
 {
 	return getAt(i);
 }
 
 template<typename T>
-inline Ptr<T> Array<T>::getPtr(uint64_t id)
+inline Ptr<T> IndexVector<T>::getPtr(uint64_t id)
 {
 	return Ptr<T>(id, *this, op_ids[id]);
 }
 
 template<typename T>
-inline uint64_t Array<T>::size() const
+inline T& IndexVector<T>::getDataAt(uint64_t i)
+{
+	return data[i];
+}
+
+template<typename T>
+inline uint64_t IndexVector<T>::getID(uint64_t i) const
+{
+	return rids[i];
+}
+
+template<typename T>
+inline uint64_t IndexVector<T>::size() const
 {
 	return data_size;
 }
 
 template<typename T>
-inline typename std::vector<T>::iterator Array<T>::begin()
+inline typename std::vector<T>::iterator IndexVector<T>::begin()
 {
 	return data.begin();
 }
 
 template<typename T>
-inline typename std::vector<T>::iterator Array<T>::end()
+inline typename std::vector<T>::iterator IndexVector<T>::end()
 {
 	return data.begin() + data_size;
 }
 
 template<typename T>
-inline uint64_t Array<T>::createNewSlot(const T& obj)
+inline uint64_t IndexVector<T>::createNewSlot(const T& obj)
 {
 	data.push_back(obj);
 	ids.push_back(data_size);
@@ -109,7 +127,7 @@ inline uint64_t Array<T>::createNewSlot(const T& obj)
 }
 
 template<typename T>
-inline uint64_t Array<T>::reuseSlot(const T& obj)
+inline uint64_t IndexVector<T>::reuseSlot(const T& obj)
 {
 	const uint64_t reuse_id = rids[data_size];
 	data[reuse_id] = obj;
@@ -119,13 +137,13 @@ inline uint64_t Array<T>::reuseSlot(const T& obj)
 }
 
 template<typename T>
-inline const T& Array<T>::getAt(uint64_t i) const
+inline const T& IndexVector<T>::getAt(uint64_t i) const
 {
 	return data[ids[i]];
 }
 
 template<typename T>
-inline bool Array<T>::isValid(uint64_t i, uint64_t validity)
+inline bool IndexVector<T>::isValid(uint64_t i, uint64_t validity) const
 {
 	return validity == op_ids[i];
 }
@@ -134,7 +152,7 @@ inline bool Array<T>::isValid(uint64_t i, uint64_t validity)
 template<typename T>
 struct Ptr
 {
-	Ptr(uint64_t id_, Array<T>& a, uint64_t vid)
+	Ptr(uint64_t id_, IndexVector<T>& a, uint64_t vid)
 		: id(id_)
 		, array(a)
 		, validity_id(vid)
@@ -157,6 +175,6 @@ struct Ptr
 
 private:
 	uint64_t id;
-	Array<T>& array;
+	IndexVector<T>& array;
 	uint64_t validity_id;
 };
