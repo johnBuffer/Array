@@ -6,13 +6,22 @@
 template<typename T>
 struct Ptr;
 
+struct Slot
+{
+	uint64_t id;
+	uint64_t data_id;
+};
+
 template<typename T>
 struct IndexVector
 {
-	IndexVector() :
-		data_size(0)
+	IndexVector()
+		: data_size(0)
+		, op_count(0)
 	{}
 	// Data ADD / REMOVE
+	template<typename... Args> 
+	uint64_t emplace_back(Args&&... args);
 	uint64_t push_back(const T& obj);
 	void erase(uint64_t id);
 	// Data access by ID
@@ -40,19 +49,29 @@ private:
 	uint64_t data_size;
 	uint64_t op_count;
 
-	uint64_t createNewSlot(const T& obj);
+	bool isFull() const;
+	Slot createNewSlot();
+	Slot getFreeSlot();
+	Slot getSlot();
 	uint64_t reuseSlot(const T& obj);
 	const T& getAt(uint64_t i) const;
 };
 
 template<typename T>
+template<typename ...Args>
+inline uint64_t IndexVector<T>::emplace_back(Args&& ...args)
+{
+	const Slot slot = getSlot();
+	new(&data[slot.data_id]) T(args...);
+	return slot.id;
+}
+
+template<typename T>
 inline uint64_t IndexVector<T>::push_back(const T& obj)
 {
-	if (data_size == data.size()) {
-		return createNewSlot(obj);
-	}
-
-	return reuseSlot(obj);
+	const Slot slot = getSlot();
+	data[slot.data_id] = obj;
+	return slot.id;
 }
 
 template<typename T>
@@ -117,23 +136,36 @@ inline typename std::vector<T>::iterator IndexVector<T>::end()
 }
 
 template<typename T>
-inline uint64_t IndexVector<T>::createNewSlot(const T& obj)
+inline bool IndexVector<T>::isFull() const
 {
-	data.push_back(obj);
-	ids.push_back(data_size);
-	rids.push_back(data_size);
-	op_ids.push_back(op_count++);
-	return data_size++;
+	return data_size == data.size();
 }
 
 template<typename T>
-inline uint64_t IndexVector<T>::reuseSlot(const T& obj)
+inline Slot IndexVector<T>::createNewSlot()
+{
+	uint64_t old_size = data.size();
+	data.emplace_back();
+	ids.push_back(old_size);
+	rids.push_back(old_size);
+	op_ids.push_back(op_count++);
+	return { old_size, old_size };
+}
+
+template<typename T>
+inline Slot IndexVector<T>::getFreeSlot()
 {
 	const uint64_t reuse_id = rids[data_size];
-	data[reuse_id] = obj;
 	op_ids[reuse_id] = op_count++;
+	return { reuse_id, data_size };
+}
+
+template<typename T>
+inline Slot IndexVector<T>::getSlot()
+{
+	const Slot slot = isFull() ? createNewSlot() : getFreeSlot();
 	++data_size;
-	return reuse_id;
+	return slot;
 }
 
 template<typename T>
