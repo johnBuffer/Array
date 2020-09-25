@@ -6,11 +6,39 @@
 template<typename T>
 struct Ptr;
 
+
 struct Slot
 {
 	uint64_t id;
 	uint64_t data_id;
 };
+
+
+template<typename T>
+struct ObjectSlot
+{
+	ObjectSlot(uint64_t id_, T* object_)
+		: id(id_)
+		, object(object_)
+	{}
+
+	uint64_t id;
+	T* object;
+};
+
+
+template<typename T>
+struct ObjectSlotConst
+{
+	ObjectSlotConst(uint64_t id_, const T* object_)
+		: id(id_)
+		, object(object_)
+	{}
+
+	uint64_t id;
+	const T* object;
+};
+
 
 template<typename T>
 struct IndexVector
@@ -35,6 +63,9 @@ struct IndexVector
 	bool isValid(uint64_t i, uint64_t validity) const;
 	// Returns the ID of the ith element of the data array
 	uint64_t getID(uint64_t i) const;
+	// Returns the ith object and id
+	ObjectSlot<T> getSlotAt(uint64_t i);
+	ObjectSlotConst<T> getSlotAt(uint64_t i) const;
 	// Iterators
 	typename std::vector<T>::iterator begin();
 	typename std::vector<T>::iterator end();
@@ -57,7 +88,6 @@ private:
 	Slot createNewSlot();
 	Slot getFreeSlot();
 	Slot getSlot();
-	uint64_t reuseSlot(const T& obj);
 	const T& getAt(uint64_t i) const;
 };
 
@@ -104,9 +134,21 @@ inline const T& IndexVector<T>::operator[](uint64_t i) const
 }
 
 template<typename T>
+inline ObjectSlot<T> IndexVector<T>::getSlotAt(uint64_t i)
+{
+	return ObjectSlot<T>(rids[i], &data[i]);
+}
+
+template<typename T>
+inline ObjectSlotConst<T> IndexVector<T>::getSlotAt(uint64_t i) const
+{
+	return ObjectSlotConst<T>(rids[i], &data[i]);
+}
+
+template<typename T>
 inline Ptr<T> IndexVector<T>::getPtr(uint64_t id)
 {
-	return Ptr<T>(id, *this, op_ids[id]);
+	return Ptr<T>(id, this, op_ids[id]);
 }
 
 template<typename T>
@@ -200,7 +242,13 @@ inline bool IndexVector<T>::isValid(uint64_t i, uint64_t validity) const
 template<typename T>
 struct Ptr
 {
-	Ptr(uint64_t id_, IndexVector<T>& a, uint64_t vid)
+	Ptr()
+		: id(0)
+		, array(nullptr)
+		, validity_id(0)
+	{}
+
+	Ptr(uint64_t id_, IndexVector<T>* a, uint64_t vid)
 		: id(id_)
 		, array(a)
 		, validity_id(vid)
@@ -208,21 +256,21 @@ struct Ptr
 
 	T* operator->()
 	{
-		return &array[id];
+		return &(*array)[id];
 	}
 
 	T& operator*()
 	{
-		return array[id];
+		return (*array)[id];
 	}
 
 	operator bool() const
 	{
-		return array.isValid(id, validity_id);
+		return array->isValid(id, validity_id) && array;
 	}
 
 private:
 	uint64_t id;
-	IndexVector<T>& array;
+	IndexVector<T>* array;
 	uint64_t validity_id;
 };
